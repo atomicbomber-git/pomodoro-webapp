@@ -1,0 +1,22 @@
+{
+  "name": "pwa-experiment",
+  "version": "1.0.0",
+  "description": "A personal Progressive Web App experiment.",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "@vue/component-compiler-utils": "^3.0.2",
+    "parcel-bundler": "^1.12.4",
+    "sass": "^1.23.7",
+    "vue-template-compiler": "^2.6.10"
+  },
+  "dependencies": {
+    "bootstrap": "^4.3.1",
+    "vue": "^2.6.10",
+    "vue-hot-reload-api": "^2.3.4"
+  },
+  "scripts": {
+    "serve": "./node_modules/parcel-bundler/bin/cli.js serve ./src/js/app.js -d ./public/assets",
+    "build": "./node_modules/parcel-bundler/bin/cli.js build ./src/js/app.js -d ./public/assets"
+  }
+}
