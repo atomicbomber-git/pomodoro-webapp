@@ -63,7 +63,7 @@
 
                 <div class="text-right mt-2">
                     <button 
-                        @click="currentPomodoroSession.running = false"
+                        @click="onPauseButtonClick"
                         v-if="currentPomodoroSession.running"
                         class="btn btn-danger btn-sm">
                         Pause
@@ -88,9 +88,12 @@
 import * as firebase from "firebase/app";
 import "firebase/firestore"
 import moment from "moment"
+import Swal from "sweetalert2"
+import metallicStopwatchSound from "../../sound/metallic-stopwatch.wav"
 
 export default {
     mounted() {
+        this.loadResources()
         this.initializeAuth()
     },
 
@@ -106,6 +109,8 @@ export default {
             maxPomodoroLength: 25 * 60,
         
             timeoutHandler: null,
+
+            audioHasEverBeenPlayed: false
         }
     },
 
@@ -128,8 +133,45 @@ export default {
         }
     },
 
+    watch: {
+        currentPomodoroSession(pomodoroSession) {
+            if (pomodoroSession.running) {
+                this.onPlayButtonClick()
+            }
+        }
+    },
+
     methods: {
         moment,
+
+        loadResources() {
+            this.audio = new Audio(metallicStopwatchSound)
+            this.audio.loop = true
+        },
+
+        confirmAudioPlay() {
+            Swal.fire({
+                title: "Audio Play Confirmation",
+                showCancelButton: true,
+                confirmButtonText: "Yes",
+                cancelButtonText: "No",
+            })
+            .then(() => {
+                this.audioHasEverBeenPlayed = true
+            })
+        },
+
+        playAudio() {
+            if (this.audioHasEverBeenPlayed) {
+                this.confirmAudioPlay()
+            }
+            
+            this.audio.play()
+        },
+
+        pauseAudio() {
+            this.audio.pause()
+        },
 
         initializeDatabase() {
             this.db = firebase.firestore()
@@ -155,6 +197,7 @@ export default {
                             this.currentPomodoroSessionId = doc.id
                             this.currentPomodoroSession = doc.data()
                         })
+                        return
                     }
 
                     this.db.collection('pomodoro_sessions').add(data)
@@ -168,6 +211,8 @@ export default {
             this.googleAuthProvider = new firebase.auth.GoogleAuthProvider()
 
             firebase.auth().onAuthStateChanged(user => {
+                console.log("Auth state changed")
+                
                 if (this.firstTimeAuth) {
                     this.firstTimeAuth = false
                 }
@@ -198,8 +243,14 @@ export default {
 
         onPlayButtonClick() {
             this.currentPomodoroSession.running = true
-
+            this.playAudio()
             this.setIncrementTimeout()
+        },
+
+        onPauseButtonClick() {
+            this.currentPomodoroSession.running = false
+            window.clearTimeout(this.timeoutHandler)
+            this.pauseAudio()
         },
 
         setIncrementTimeout() {

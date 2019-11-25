@@ -1,6 +1,7 @@
 /* Style related imports */
 import "../css/app.scss"
 
+/* Sound files */
 import Vue from 'vue'
 import Index from "./vue-components/Index"
 
