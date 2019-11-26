@@ -40,7 +40,7 @@
             >
             <div class="card-body">
                 <h2>
-                    Your Session
+                    Current Session
                 </h2>
             
                 <div class="progress">
@@ -50,9 +50,9 @@
                         :style="{
                             width: `${elapsed_percentage}%`,
                         }"
-                        aria-valuenow="25"
+                        :aria-valuenow="currentPomodoroSession.elapsed_seconds"
                         aria-valuemin="0"
-                        aria-valuemax="100"
+                        :aria-valuemax="currentPomodoroSession.length_seconds"
                         >
                     </div>
                 </div>
@@ -62,6 +62,13 @@
                 </h1>
 
                 <div class="text-right mt-2">
+                    <button
+                        class="btn btn-dark btn-sm"
+                        @click="onCreateNewSessionButtonClick"
+                        >
+                        New Session
+                    </button>
+
                     <button 
                         @click="onPauseButtonClick"
                         v-if="currentPomodoroSession.running"
@@ -105,11 +112,7 @@ export default {
             currentPomodoroSessionId: null,
             currentPomodoroSession: null,
 
-            pomodoroTimer: 0,
-            maxPomodoroLength: 25 * 60,
-        
             timeoutHandler: null,
-
             audioHasEverBeenPlayed: false
         }
     },
@@ -123,7 +126,7 @@ export default {
                     this.currentPomodoroSession.length_seconds - 
                     this.currentPomodoroSession.elapsed_seconds
                 )
-                .format('mm : ss')
+                .format('mm:ss')
         },
 
         elapsed_percentage() {
@@ -162,7 +165,7 @@ export default {
         },
 
         playAudio() {
-            if (this.audioHasEverBeenPlayed) {
+            if (!this.audioHasEverBeenPlayed) {
                 this.confirmAudioPlay()
             }
             
@@ -175,15 +178,6 @@ export default {
 
         initializeDatabase() {
             this.db = firebase.firestore()
-
-            let data = {
-                uid: this.currentUser.uid,
-                elapsed_seconds: 0,
-                length_seconds: 60 * 25,
-                started_at: new Date(),
-                type: 'current',
-                running: false,
-            }
 
             this.db.collection('pomodoro_sessions')
                 .where('uid', '==', this.currentUser.uid)
@@ -200,19 +194,31 @@ export default {
                         return
                     }
 
-                    this.db.collection('pomodoro_sessions').add(data)
-                        .then(ref => {
-                            console.log(ref)
-                        })
+                    this.createNewCurrentSession()
                 })
+        },
+
+        createNewCurrentSession(length_seconds) {
+            return this.db
+                .collection('pomodoro_sessions')
+                .add(this.getNewCurrentSession(length_seconds))
+        },
+
+        getNewCurrentSession(length_seconds) {
+            return {
+                uid: this.currentUser.uid,
+                elapsed_seconds: 0,
+                length_seconds: length_seconds,
+                started_at: new Date(),
+                type: 'current',
+                running: false,
+            }
         },
 
         initializeAuth() {
             this.googleAuthProvider = new firebase.auth.GoogleAuthProvider()
 
             firebase.auth().onAuthStateChanged(user => {
-                console.log("Auth state changed")
-                
                 if (this.firstTimeAuth) {
                     this.firstTimeAuth = false
                 }
@@ -241,6 +247,10 @@ export default {
                 })
         },
 
+        onCreateNewSessionButtonClick() {
+            
+        },
+
         onPlayButtonClick() {
             this.currentPomodoroSession.running = true
             this.playAudio()
@@ -248,9 +258,14 @@ export default {
         },
 
         onPauseButtonClick() {
+            this.pauseCurrentPomodoroSession()
+        },
+
+        pauseCurrentPomodoroSession() {
             this.currentPomodoroSession.running = false
             window.clearTimeout(this.timeoutHandler)
             this.pauseAudio()
+            this.syncSessionData()
         },
 
         setIncrementTimeout() {
